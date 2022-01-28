@@ -228,16 +228,28 @@ class Model(object):
       # To avoid the network getting clues of motion by tracking those masks, we
       # define the segmentation masks as the union temporally.
       with tf.variable_scope('egomotion_prediction'):
-        base_input = self.image_stack_norm  # (B, H, W, 9)
-        seg_input = self.seg_stack  # (B, H, W, 9)
+        base_input = self.image_stack_norm  # (B, H, W, 15)
+        seg_input = self.seg_stack  # (B, H, W, 15)
         ref_zero = tf.constant(0, dtype=tf.uint8)
         # Motion model is currently defined for three-frame sequences.
         object_mask1 = tf.equal(seg_input[:, :, :, 0], ref_zero)
         object_mask2 = tf.equal(seg_input[:, :, :, 3], ref_zero)
         object_mask3 = tf.equal(seg_input[:, :, :, 6], ref_zero)
-        mask_complete = tf.expand_dims(tf.logical_and(  # (B, H, W, 1)
-            tf.logical_and(object_mask1, object_mask2), object_mask3), axis=3)
-        mask_complete = tf.tile(mask_complete, (1, 1, 1, 9))  # (B, H, W, 9)
+        object_mask4 = tf.equal(seg_input[:, :, :, 9], ref_zero)
+        object_mask5 = tf.equal(seg_input[:, :, :, 12], ref_zero)
+        mask_complete = tf.expand_dims(
+          tf.logical_and(
+            tf.logical_and(
+              tf.logical_and( # (B, H, W, 1)
+                tf.logical_and(object_mask1, object_mask2), 
+              object_mask3),
+            object_mask4),
+          object_mask5)
+        , axis=3)
+
+
+
+        mask_complete = tf.tile(mask_complete, (1, 1, 1, 15))  # (B, H, W, 9) #vllt doch 9 lassen wegen input vom netz
         # Now mask out base_input.
         self.mask_complete = tf.to_float(mask_complete)
         self.base_input_masked = base_input * self.mask_complete
@@ -269,21 +281,21 @@ class Model(object):
           self.warped_seq[s] = []
           self.egomotions_seq[s] = []
           for source_index in range(self.seq_length):
-            egomotion_mat_i_1 = project.get_transform_mat(
-                self.egomotion, source_index, 1)
+            egomotion_mat_i_3 = project.get_transform_mat(
+                self.egomotion, source_index, 3)
             # with tf.Session() as sess:  
               # print(egomotion_mat_i_1.eval()) 
-            warped_image_i_1, _ = (
+            warped_image_i_3, _ = (
                 project.inverse_warp(
                     self.image_stack[
                         :, :, :, source_index*3:(source_index+1)*3],
                     self.depth_upsampled[1][s],
-                    egomotion_mat_i_1,
+                    egomotion_mat_i_3,
                     self.intrinsic_mat[:, 0, :, :],
                     self.intrinsic_mat_inv[:, 0, :, :]))
 
-            self.warped_seq[s].append(warped_image_i_1)
-            self.egomotions_seq[s].append(egomotion_mat_i_1)
+            self.warped_seq[s].append(warped_image_i_3)
+            self.egomotions_seq[s].append(egomotion_mat_i_3)
 
           # Second, for every object in the segmentation mask, take its mask and
           # warp it according to the egomotion estimate. Then put a threshold to
@@ -553,9 +565,9 @@ class Model(object):
                 background = tf.expand_dims(self.base_warping, axis=0)
                 def construct_const_filter_tensor(obj_id):
                   return tf.fill(
-                      dims=[self.img_height, self.img_width, 3],
+                      dims=[self.img_height, self.img_width, 3], #vorher 3
                       value=tf.sign(obj_id)) * tf.to_float(
-                          tf.equal(self.seg_stack[batch_s, :, :, 3:6],
+                          tf.equal(self.seg_stack[batch_s, :, :, 6:9], #vorher 3:6
                                    tf.cast(obj_id, dtype=tf.uint8)))
                 filter_tensor = tf.map_fn(
                     construct_const_filter_tensor,
@@ -690,21 +702,30 @@ class Model(object):
         for batch_s in range(self.batch_size):
           whole_strip = tf.concat([self.warped_seq[s][0][batch_s],
                                    self.warped_seq[s][1][batch_s],
-                                   self.warped_seq[s][2][batch_s]], axis=1)
+                                   self.warped_seq[s][2][batch_s],
+                                   self.warped_seq[s][3][batch_s],
+                                   self.warped_seq[s][4][batch_s]
+                                   ], axis=1)
           tf.summary.image('base_warp_batch%s_scale%s' % (batch_s, s),
                            tf.expand_dims(whole_strip, axis=0))
 
           whole_strip_input = tf.concat(
               [self.inputs_objectmotion_net[s][batch_s][:, :, :, 0:3],
                self.inputs_objectmotion_net[s][batch_s][:, :, :, 3:6],
-               self.inputs_objectmotion_net[s][batch_s][:, :, :, 6:9]], axis=2)
+               self.inputs_objectmotion_net[s][batch_s][:, :, :, 6:9],
+               self.inputs_objectmotion_net[s][batch_s][:, :, :, 9:12],
+               self.inputs_objectmotion_net[s][batch_s][:, :, :, 12:15],
+               ], axis=2)
           tf.summary.image('input_objectmotion_batch%s_scale%s' % (batch_s, s),
                            whole_strip_input)  # (B, H, 3*W, 3)
 
       for batch_s in range(self.batch_size):
         whole_strip = tf.concat([self.base_input_masked[batch_s, :, :, 0:3],
                                  self.base_input_masked[batch_s, :, :, 3:6],
-                                 self.base_input_masked[batch_s, :, :, 6:9]],
+                                 self.base_input_masked[batch_s, :, :, 6:9],
+                                 self.base_input_masked[batch_s, :, :, 9:12],
+                                 self.base_input_masked[batch_s, :, :, 12:15]
+                                 ],
                                 axis=1)
         tf.summary.image('input_egomotion_batch%s' % batch_s,
                          tf.expand_dims(whole_strip, axis=0))
@@ -768,7 +789,7 @@ class Model(object):
     """Builds depth model reading from placeholders."""
     with tf.variable_scope('depth_prediction'):
       input_image = tf.placeholder(
-          tf.float32, [self.batch_size, self.img_height, self.img_width, 3],
+          tf.float32, [self.batch_size, self.img_height, self.img_width, 3], #why 3 3 channel rgb als input des netzes? ?
           name='raw_input')
       self.input_image = input_image
       if self.imagenet_norm:
@@ -786,7 +807,7 @@ class Model(object):
     """Builds egomotion model reading from placeholders."""
     input_image_stack = tf.placeholder(
         tf.float32,
-        [1, self.img_height, self.img_width, self.seq_length * 3],
+        [1, self.img_height, self.img_width, self.seq_length * 3], #input des netzes alle 5 frames
         name='raw_input')
     input_bottleneck_stack = None
 
