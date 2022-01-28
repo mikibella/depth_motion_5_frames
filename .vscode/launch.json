@@ -1,0 +1,46 @@
+{
+    // Verwendet IntelliSense zum Ermitteln möglicher Attribute.
+    // Zeigen Sie auf vorhandene Attribute, um die zugehörigen Beschreibungen anzuzeigen.
+    // Weitere Informationen finden Sie unter https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Training",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "--logtostderr",
+                "--file_extension", "png",
+                "--checkpoint_dir","C:/Users/bellmi2/Documents/Praxissemester/depth_motion/model/test_aligned",
+                "--data_dir", "C:/Users/bellmi2/Documents/kitti/train_3_frames_aligned",
+                "--architecture" ,"resnet",
+                "--pretrained_ckpt", "C:/Users/bellmi2/Documents/Praxissemester/depth_motion/model/model-199160",
+                "--imagenet_norm" ,"True ",
+                "--joint_encoder", "False"
+                // "--handle_motion","False"
+            ]
+        },
+        {
+            "name": "inference",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "--logtostderr",
+                "--file_extension", "png",
+                "--depth",
+                "--egomotion", "True",
+                // "--input_dir" ,"C:/Users/bellmi2/Documents/kitti/depth_selection/val_selection_cropped/eval_motion",
+                "--input_dir" ,"C:/Users/bellmi2/Documents/kitti/sceneflow/eval_inference",
+                "--output_dir" ,"C:/Users/bellmi2/Documents/kitti/sceneflow/eval_inference/output",
+                "--model_ckpt" ,"C:/Users/bellmi2/Documents/Praxissemester/depth_motion/model/test_aligned/model-726",
+                "--use_masks","True",
+                "--inference_mode","triplets"
+
+            ]
+        },
+    ]
+}
