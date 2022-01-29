@@ -249,15 +249,20 @@ class Model(object):
 
 
 
-        mask_complete = tf.tile(mask_complete, (1, 1, 1, 15))  # (B, H, W, 9) #vllt doch 9 lassen wegen input vom netz
+        mask_complete = tf.tile(mask_complete, (1, 1, 1, 9))  # (B, H, W, 9) #vllt doch 9 lassen wegen input vom netz
         # Now mask out base_input.
+        base_input_0_3_5 =tf.concat(
+              [base_input[:, :, :, 0:3],
+               base_input[:, :, :, 6:9],
+               base_input[:, :, :, 12:15],
+               ], axis=3)
         self.mask_complete = tf.to_float(mask_complete)
-        self.base_input_masked = base_input * self.mask_complete
+        self.base_input_masked = base_input_0_3_5 * self.mask_complete
         self.egomotion = nets.egomotion_net(
             image_stack=self.base_input_masked,
             disp_bottleneck_stack=None,
             joint_encoder=False,
-            seq_length=self.seq_length,
+            seq_length=self.seq_length-2,
             weight_reg=self.weight_reg)
 
       # Define object motion network for refinement. This network only sees
@@ -280,9 +285,9 @@ class Model(object):
         for s in range(NUM_SCALES):
           self.warped_seq[s] = []
           self.egomotions_seq[s] = []
-          for source_index in range(self.seq_length):
+          for source_index in range(self.seq_length-2):
             egomotion_mat_i_3 = project.get_transform_mat(
-                self.egomotion, source_index, 3)
+                self.egomotion, source_index, 1)
             # with tf.Session() as sess:  
               # print(egomotion_mat_i_1.eval()) 
             warped_image_i_3, _ = (
@@ -315,7 +320,8 @@ class Model(object):
             color_stack = []
             mask_stack = []
             mask_stack_warped = []
-            for j in range(self.seq_length):
+            for j in range(self.seq_length-2):
+              j = j*2
               current_image = self.warped_seq[s][j][i]  # (H, W, 3)
               current_seg = seg_sequence[:, :, j * 3:(j+1) * 3]  # (H, W, 3)
 
@@ -408,7 +414,7 @@ class Model(object):
                 image_stack=tf.stop_gradient(color_stack),
                 disp_bottleneck_stack=None,
                 joint_encoder=False,  # Joint encoder not supported.
-                seq_length=self.seq_length,
+                seq_length=self.seq_length-2,
                 weight_reg=self.weight_reg)
             # all_transforms of shape (N, 2, 6).
             self.object_transforms[s].append(all_transforms)
@@ -613,6 +619,7 @@ class Model(object):
 
         # If the minimum loss should be computed, the loss calculation has been
         # postponed until here.
+        ## eventuel nur error zwischen 0-2 4-2!!!!!!!!
         if self.compute_minimum_loss:
           for frame_index in range(self.middle_frame_index):
             key1 = '%d-%d' % (frame_index, self.middle_frame_index)
@@ -701,9 +708,7 @@ class Model(object):
       for s in range(NUM_SCALES):
         for batch_s in range(self.batch_size):
           whole_strip = tf.concat([self.warped_seq[s][0][batch_s],
-                                   self.warped_seq[s][1][batch_s],
                                    self.warped_seq[s][2][batch_s],
-                                   self.warped_seq[s][3][batch_s],
                                    self.warped_seq[s][4][batch_s]
                                    ], axis=1)
           tf.summary.image('base_warp_batch%s_scale%s' % (batch_s, s),
@@ -711,9 +716,7 @@ class Model(object):
 
           whole_strip_input = tf.concat(
               [self.inputs_objectmotion_net[s][batch_s][:, :, :, 0:3],
-               self.inputs_objectmotion_net[s][batch_s][:, :, :, 3:6],
                self.inputs_objectmotion_net[s][batch_s][:, :, :, 6:9],
-               self.inputs_objectmotion_net[s][batch_s][:, :, :, 9:12],
                self.inputs_objectmotion_net[s][batch_s][:, :, :, 12:15],
                ], axis=2)
           tf.summary.image('input_objectmotion_batch%s_scale%s' % (batch_s, s),
@@ -722,9 +725,7 @@ class Model(object):
       for batch_s in range(self.batch_size):
         whole_strip = tf.concat([self.base_input_masked[batch_s, :, :, 0:3],
                                  self.base_input_masked[batch_s, :, :, 3:6],
-                                 self.base_input_masked[batch_s, :, :, 6:9],
-                                 self.base_input_masked[batch_s, :, :, 9:12],
-                                 self.base_input_masked[batch_s, :, :, 12:15]
+                                 self.base_input_masked[batch_s, :, :, 6:9]
                                  ],
                                 axis=1)
         tf.summary.image('input_egomotion_batch%s' % batch_s,
@@ -838,13 +839,13 @@ class Model(object):
           image_stack=input_image_stack,
           disp_bottleneck_stack=input_bottleneck_stack,
           joint_encoder=self.joint_encoder,
-          seq_length=self.seq_length,
+          seq_length=self.seq_length-2,
           weight_reg=self.weight_reg)
       est_objectmotion = nets.objectmotion_net(
         image_stack=input_image_stack,
           disp_bottleneck_stack=input_bottleneck_stack,
           joint_encoder=self.joint_encoder,
-          seq_length=self.seq_length,
+          seq_length=self.seq_length-2,
           weight_reg=self.weight_reg)
     self.input_image_stack = input_image_stack
     self.est_egomotion = est_egomotion

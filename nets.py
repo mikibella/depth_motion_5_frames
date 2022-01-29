@@ -71,6 +71,12 @@ def egomotion_net(image_stack, disp_bottleneck_stack, joint_encoder, seq_length,
       if not joint_encoder:
         # Define separate encoder. If sharing, we can skip the encoding step,
         # as the bottleneck layer will already be passed as input.
+        if image_stack.shape.as_list()[-1] ==15:
+          image_stack= tf.concat(
+                [image_stack[:, :, :, 0:3],
+                image_stack[:, :, :, 6:9],
+                image_stack[:, :, :, 12:15],
+                ], axis=3)
         cnv1 = slim.conv2d(image_stack, 16, [7, 7], stride=2, scope='cnv1')
         cnv2 = slim.conv2d(cnv1, 32, [5, 5], stride=2, scope='cnv2')
         cnv3 = slim.conv2d(cnv2, 64, [3, 3], stride=2, scope='cnv3')
@@ -126,6 +132,12 @@ def objectmotion_net(image_stack, disp_bottleneck_stack, joint_encoder,
       if not joint_encoder:
         # Define separate encoder. If sharing, we can skip the encoding step,
         # as the bottleneck layer will already be passed as input.
+        if image_stack.shape.as_list()[-1] ==15:
+          image_stack= tf.concat(
+                [image_stack[:, :, :, 0:3],
+                image_stack[:, :, :, 6:9],
+                image_stack[:, :, :, 12:15],
+                ], axis=3)
         cnv1 = slim.conv2d(image_stack, 16, [7, 7], stride=2, scope='cnv1')
         cnv2 = slim.conv2d(cnv1, 32, [5, 5], stride=2, scope='cnv2')
         cnv3 = slim.conv2d(cnv2, 64, [3, 3], stride=2, scope='cnv3')

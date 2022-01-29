@@ -116,11 +116,12 @@ def main(_):
   seed = 8964
   tf.set_random_seed(seed)
   np.random.seed(seed)
-  os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+  #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
   os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
   #TF_CPP_VMODULE="asm_compiler=3"
   random.seed(seed)
   FLAGS.joint_encoder = False
+  FLAGS.handle_motion = False
 
   # tf.test.is_gpu_available(
   #   cuda_only=False, min_cuda_compute_capability=None
