@@ -22,12 +22,16 @@ def compute_overlap(mask1, mask2):
     # Use IoU here.
     return np.sum(mask1 & mask2)/np.sum(mask1 | mask2)
 
-def align(seg_img1, seg_img2, seg_img3, threshold_same=0.3):
+def align(seg_img1, seg_img2, seg_img3,seg_img4,seg_img5, threshold_same=0.3):
     res_img1 = np.zeros_like(seg_img1)
     res_img2 = np.zeros_like(seg_img2)
     res_img3 = np.zeros_like(seg_img3)
+    res_img4 = np.zeros_like(seg_img4)
+    res_img5 = np.zeros_like(seg_img5)
     remaining_objects2 = list(np.unique(seg_img2.flatten()))
     remaining_objects3 = list(np.unique(seg_img3.flatten()))
+    remaining_objects4 = list(np.unique(seg_img4.flatten()))
+    remaining_objects5 = list(np.unique(seg_img5.flatten()))
     for seg_id in np.unique(seg_img1):
         # See if we can find correspondences to seg_id in seg_img2.
         max_overlap2 = float('-inf')
@@ -46,9 +50,31 @@ def align(seg_img1, seg_img2, seg_img3, threshold_same=0.3):
                     max_overlap3 = overlap
                     max_segid3 = seg_id3
             if max_overlap3 > threshold_same:
-                res_img1[seg_img1==seg_id] = seg_id
-                res_img2[seg_img2==max_segid2] = seg_id
-                res_img3[seg_img3==max_segid3] = seg_id
-                remaining_objects2.remove(max_segid2)
-                remaining_objects3.remove(max_segid3)
-    return res_img1, res_img2, res_img3
+                max_overlap4 = float('-inf')
+                max_segid4 = -1
+                for seg_id4 in remaining_objects4:
+                    overlap = compute_overlap(seg_img3==max_segid3, seg_img4==seg_id4)
+                    if overlap>max_overlap4:
+                        max_overlap4 = overlap
+                        max_segid4 = seg_id4
+                if max_overlap4 > threshold_same:
+                    max_overlap4 = float('-inf')
+                    max_segid5 = -1
+                for seg_id5 in remaining_objects5:
+                    overlap = compute_overlap(seg_img4==max_segid4, seg_img5==seg_id5)
+                    if overlap>max_overlap5:
+                        max_overlap5 = overlap
+                        max_segid5 = seg_id5
+                if max_overlap5 > threshold_same:
+
+
+                    res_img1[seg_img1==seg_id] = seg_id
+                    res_img2[seg_img2==max_segid2] = seg_id
+                    res_img3[seg_img3==max_segid3] = seg_id
+                    res_img4[seg_img5==max_segid5] = seg_id
+                    res_img4[seg_img5==max_segid5] = seg_id
+                    remaining_objects2.remove(max_segid2)
+                    remaining_objects3.remove(max_segid3)
+                    remaining_objects4.remove(max_segid4)
+                    remaining_objects5.remove(max_segid5)
+    return res_img1, res_img2, res_img3,res_img4,res_img5

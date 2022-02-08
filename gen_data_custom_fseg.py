@@ -33,8 +33,8 @@ SEQ_LENGTH = 5
 WIDTH = 416
 HEIGHT = 128
 STEPSIZE = 1
-INPUT_DIR = 'C:/Users/bellmi2/Documents/kitti/Kitti_whole'
-OUTPUT_DIR = 'C:/Users/bellmi2/Documents/Praxissemester/depth_motion_5_frames/test_5_frames'
+INPUT_DIR = 'C:/Users/bella/Documents/Bachelor/kitti'
+OUTPUT_DIR = 'C:/Users/bella/Documents/Bachelor/kitti'
 
 
 def get_line(file, start):
@@ -119,9 +119,9 @@ for d in glob.glob(INPUT_DIR + '/*/'):
                 #print('filesss = ', files)
                 for i in range(SEQ_LENGTH, len(segs)+1, STEPSIZE):
                     imgnum = str(ct).zfill(10)
-                    if os.path.exists(OUTPUT_DIR + seqname + '/' + imgnum + '-fseg.png'):
-                        ct+=1
-                        continue
+                    # if os.path.exists(OUTPUT_DIR + seqname + '/' + imgnum + '-fseg.png'):
+                    #     ct+=1
+                    #     continue
                     big_img = np.zeros(shape=(HEIGHT, WIDTH*SEQ_LENGTH, 3))
                     wct = 0
                     wrt = 0
@@ -157,8 +157,7 @@ for d in glob.glob(INPUT_DIR + '/*/'):
                         calib_representation = ','.join([str(c) for c in calib_current.flatten()])
 
                         if wrt == 5:
-                            img0, img1, img2 = align(img0, img1, img2, threshold_same=0.5)
-                            img2, img3, img4 = align(img2, img3, img4, threshold_same=0.5)
+                            img0, img1, img2,img3,img4 = align(img0, img1, img2,img3,img4, threshold_same=0.5)
                             img0 = cv2.resize(img0, (WIDTH, HEIGHT))
                             img1 = cv2.resize(img1, (WIDTH, HEIGHT))
                             img2 = cv2.resize(img2, (WIDTH, HEIGHT))
