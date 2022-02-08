@@ -121,7 +121,7 @@ def main(_):
   #TF_CPP_VMODULE="asm_compiler=3"
   random.seed(seed)
   FLAGS.joint_encoder = False
-  FLAGS.handle_motion = False
+ # FLAGS.handle_motion = False
 
   # tf.test.is_gpu_available(
   #   cuda_only=False, min_cuda_compute_capability=None

@@ -13,10 +13,10 @@
             "args": [
                 "--logtostderr",
                 "--file_extension", "png",
-                "--checkpoint_dir","C:/Users/bellmi2/Documents/Praxissemester/depth_motion/model/test_aligned",
-                "--data_dir", "C:/Users/bellmi2/Documents/kitti/train_3_frames_aligned",
+                "--checkpoint_dir","C:/Users/bellmi2/Documents/Praxissemester/depth_motion_5_frames/model/5_Frames",
+                "--data_dir", "C:/Users/bellmi2/Documents/Praxissemester/depth_motion_5_frames/test_5_frames",
                 "--architecture" ,"resnet",
-                "--pretrained_ckpt", "C:/Users/bellmi2/Documents/Praxissemester/depth_motion/model/model-199160",
+                "--pretrained_ckpt", "C:/Users/bellmi2/Documents/Praxissemester/depth_motion_5_frames/model/model-199160",
                 "--imagenet_norm" ,"True ",
                 "--joint_encoder", "False"
                 // "--handle_motion","False"

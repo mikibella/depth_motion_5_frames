@@ -71,7 +71,7 @@ def egomotion_net(image_stack, disp_bottleneck_stack, joint_encoder, seq_length,
       if not joint_encoder:
         # Define separate encoder. If sharing, we can skip the encoding step,
         # as the bottleneck layer will already be passed as input.
-        if image_stack.shape.as_list()[-1] ==15:
+        if image_stack.shape.as_list()[-1] !=9:
           image_stack= tf.concat(
                 [image_stack[:, :, :, 0:3],
                 image_stack[:, :, :, 6:9],

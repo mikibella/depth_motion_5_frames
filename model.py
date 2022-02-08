@@ -235,19 +235,19 @@ class Model(object):
         object_mask1 = tf.equal(seg_input[:, :, :, 0], ref_zero)
         object_mask2 = tf.equal(seg_input[:, :, :, 3], ref_zero)
         object_mask3 = tf.equal(seg_input[:, :, :, 6], ref_zero)
-        object_mask4 = tf.equal(seg_input[:, :, :, 9], ref_zero)
-        object_mask5 = tf.equal(seg_input[:, :, :, 12], ref_zero)
-        mask_complete = tf.expand_dims(
-          tf.logical_and(
-            tf.logical_and(
-              tf.logical_and( # (B, H, W, 1)
-                tf.logical_and(object_mask1, object_mask2), 
-              object_mask3),
-            object_mask4),
-          object_mask5)
-        , axis=3)
-
-
+        # object_mask4 = tf.equal(seg_input[:, :, :, 9], ref_zero)
+        # object_mask5 = tf.equal(seg_input[:, :, :, 12], ref_zero)
+        # mask_complete = tf.expand_dims(
+        #   tf.logical_and(
+        #     tf.logical_and(
+        #       tf.logical_and( # (B, H, W, 1)
+        #         tf.logical_and(object_mask1, object_mask2), 
+        #       object_mask3),
+        #     object_mask4),
+        #   object_mask5)
+        # , axis=3)
+        mask_complete = tf.expand_dims(tf.logical_and(  # (B, H, W, 1)
+            tf.logical_and(object_mask1, object_mask2), object_mask3), axis=3)
 
         mask_complete = tf.tile(mask_complete, (1, 1, 1, 9))  # (B, H, W, 9) #vllt doch 9 lassen wegen input vom netz
         # Now mask out base_input.
@@ -321,7 +321,6 @@ class Model(object):
             mask_stack = []
             mask_stack_warped = []
             for j in range(self.seq_length-2):
-              j = j*2
               current_image = self.warped_seq[s][j][i]  # (H, W, 3)
               current_seg = seg_sequence[:, :, j * 3:(j+1) * 3]  # (H, W, 3)
 
@@ -447,7 +446,7 @@ class Model(object):
       self.ssim_loss = 0
       self.icp_transform_loss = 0
       self.icp_residual_loss = 0
-
+      self.seq_length =3
       # self.images is organized by ...[scale][B, h, w, seq_len * 3].
       self.images = [None for _ in range(NUM_SCALES)]
       # Following nested lists are organized by ...[scale][source-target].
@@ -490,8 +489,8 @@ class Model(object):
                   disp_input, self.images[s][:, :, :, 3 * i:3 * (i + 1)])
 
         self.debug_all_warped_image_batches = []
-        for i in range(self.seq_length):
-          for j in range(self.seq_length):
+        for i in range(self.seq_length-2):
+          for j in range(self.seq_length-2):
             if i == j:
               continue
 
@@ -621,10 +620,11 @@ class Model(object):
         # postponed until here.
         ## eventuel nur error zwischen 0-2 4-2!!!!!!!!
         if self.compute_minimum_loss:
-          for frame_index in range(self.middle_frame_index):
-            key1 = '%d-%d' % (frame_index, self.middle_frame_index)
-            key2 = '%d-%d' % (self.seq_length - frame_index - 1,
-                              self.middle_frame_index)
+          for frame_index in range((self.middle_frame_index-1)):
+            key1 = '%d-%d' % (frame_index, self.middle_frame_index-1)
+            # key2 = '%d-%d' % (self.seq_length-2 - frame_index - 1,
+            #                   self.middle_frame_index)
+            key2 = '%d-%d' % (2,0)
             logging.info('computing min error between %s and %s', key1, key2)
             min_error = tf.minimum(self.warp_error[s][key1],
                                    self.warp_error[s][key2])
@@ -708,16 +708,16 @@ class Model(object):
       for s in range(NUM_SCALES):
         for batch_s in range(self.batch_size):
           whole_strip = tf.concat([self.warped_seq[s][0][batch_s],
-                                   self.warped_seq[s][2][batch_s],
-                                   self.warped_seq[s][4][batch_s]
+                                   self.warped_seq[s][1][batch_s],
+                                   self.warped_seq[s][2][batch_s]
                                    ], axis=1)
           tf.summary.image('base_warp_batch%s_scale%s' % (batch_s, s),
                            tf.expand_dims(whole_strip, axis=0))
 
           whole_strip_input = tf.concat(
               [self.inputs_objectmotion_net[s][batch_s][:, :, :, 0:3],
+               self.inputs_objectmotion_net[s][batch_s][:, :, :, 3:6],
                self.inputs_objectmotion_net[s][batch_s][:, :, :, 6:9],
-               self.inputs_objectmotion_net[s][batch_s][:, :, :, 12:15],
                ], axis=2)
           tf.summary.image('input_objectmotion_batch%s_scale%s' % (batch_s, s),
                            whole_strip_input)  # (B, H, 3*W, 3)
